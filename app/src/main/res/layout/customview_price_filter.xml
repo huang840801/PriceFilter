@@ -33,6 +33,7 @@
         android:id="@+id/leftImageView"
         android:layout_width="60dp"
         android:layout_height="60dp"
+        android:tint="#43A047"
         android:src="@drawable/circle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/line"
