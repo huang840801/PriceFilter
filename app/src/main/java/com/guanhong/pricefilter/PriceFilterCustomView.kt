@@ -17,8 +17,10 @@ class PriceFilterCustomView : LinearLayout {
     private var rightImageViewWidth = 0
     private var rootViewWidth = 0
 
-    private var leftDistance = 0
-    private var rightDistance = 0
+    private var leftImageViewMarginLeft = 0
+    private var rightImageViewMarginRight = 0
+
+    private var canMoveDistance = 0
 
     private var rootLayoutMarginLeft = 0
     private var rootLayoutMarginRight = 0
@@ -43,6 +45,16 @@ class PriceFilterCustomView : LinearLayout {
 
         screenWidth = context.resources.displayMetrics.widthPixels
 
+        leftImageView.post {
+
+            leftImageViewWidth = leftImageView.width
+        }
+        rightImageView.post {
+
+            rightImageViewWidth = rightImageView.width
+
+            canMoveDistance = rootViewWidth - leftImageViewWidth - rightImageViewWidth
+        }
         rootLayout.post {
 
             val coordinateArray = IntArray(2)
@@ -54,55 +66,42 @@ class PriceFilterCustomView : LinearLayout {
             rootViewWidth = rootLayout.width
         }
 
-        leftImageView.post {
-
-            leftImageViewWidth = leftImageView.width
-        }
-        rightImageView.post {
-
-            rightImageViewWidth = rightImageView.width
-        }
-
         Handler().postDelayed({
 
+            Log.d("Huang", " rootViewWidth " + rootViewWidth)
             Log.d("Huang", " leftImageViewWidth " + leftImageViewWidth)
             Log.d("Huang", " rightImageViewWidth " + rightImageViewWidth)
-            Log.d("Huang", " rootViewWidth " + rootViewWidth)
             Log.d("Huang", " rootLayoutMarginLeft " + rootLayoutMarginLeft)
             Log.d("Huang", " rootLayoutMarginRight " + rootLayoutMarginRight)
+            Log.d("Huang", " total " + getTotalWidth())
 
         }, 1000)
+        
         leftImageView.setOnTouchListener { view, event ->
             when (event.action and MotionEvent.ACTION_MASK) {
 
                 MotionEvent.ACTION_MOVE -> {
 
-//                    Log.d("Huang", " event.rawX ${event.rawX}")
-//                    Log.d("Huang", " event.X ${event.x}")
+                    if (event.rawX - rootLayoutMarginLeft > 0) {
 
+                        val moveDistance = (event.rawX - rootLayoutMarginLeft)
+                        val layoutParams = view.layoutParams as ConstraintLayout.LayoutParams
 
-                    val moveDistance =
-                        (event.rawX - rootLayoutMarginLeft - leftImageViewWidth / 2).toInt()
+                        if (moveDistance < rootViewWidth - rightImageViewMarginRight - leftImageViewWidth - rightImageViewWidth) {
 
-                    Log.d("Huang", " moveDistance ${moveDistance}")
+                            layoutParams.leftMargin = moveDistance.toInt()
+                        }
 
-                    val layoutParams = view.layoutParams as ConstraintLayout.LayoutParams
+                        leftImageViewMarginLeft = if (layoutParams.leftMargin > 0) {
 
-                    if (moveDistance < rootViewWidth - rightDistance - leftImageViewWidth / 2 - rightImageViewWidth) {
+                            (layoutParams.leftMargin)
+                        } else {
 
-                        layoutParams.leftMargin = moveDistance
+                            0
+                        }
+
+                        setMinPrice(minPrice + ((maxPrice - minPrice) * leftImageViewMarginLeft / canMoveDistance.toFloat()))
                     }
-
-                    leftDistance = if (layoutParams.leftMargin > 0) {
-
-                        (layoutParams.leftMargin)
-                    } else {
-
-                        0
-                    }
-
-
-                    setMinPrice(minPrice + (leftDistance * (maxPrice - minPrice) / rootViewWidth) + rootLayoutMarginLeft)
                 }
             }
 
@@ -115,36 +114,26 @@ class PriceFilterCustomView : LinearLayout {
 
                 MotionEvent.ACTION_MOVE -> {
 
-                    val layoutParams = view.layoutParams as ConstraintLayout.LayoutParams
+                    if (event.rawX > rootLayoutMarginRight && event.rawX < rootLayoutMarginRight + rootViewWidth) {
 
-                    val moveDistance =
-                        (screenWidth - event.rawX - rootLayoutMarginRight - rightImageViewWidth / 2).toInt()
+                        val moveDistance = screenWidth - event.rawX - rootLayoutMarginRight
+                        val layoutParams = view.layoutParams as ConstraintLayout.LayoutParams
 
-//                    Log.d("Huang", "  layoutParams.rightMargin " +  layoutParams.rightMargin)
-//                    Log.d("Huang", "  leftDistance " +  leftDistance)
-                    Log.d("Huang", " not move ")
+                        if (moveDistance < rootViewWidth - leftImageViewMarginLeft - rightImageViewWidth - leftImageViewWidth) {
 
-                    if (moveDistance < rootViewWidth - leftDistance - rightImageViewWidth / 2 - leftImageViewWidth) {
+                            layoutParams.rightMargin = moveDistance.toInt()
+                        }
 
-                        Log.d("Huang", " move ")
+                        rightImageViewMarginRight = if (layoutParams.rightMargin > 0) {
 
-                        layoutParams.rightMargin =
-                            (screenWidth - event.rawX - rootLayoutMarginRight - rightImageViewWidth / 2).toInt()
-//                        view.layoutParams = layoutParams
+                            layoutParams.rightMargin
+                        } else {
+
+                            0
+                        }
+
+                        setMaxPrice(maxPrice - ((maxPrice - minPrice) * rightImageViewMarginRight  / canMoveDistance.toFloat()))
                     }
-
-                    rightDistance = if (layoutParams.rightMargin > 0) {
-
-                        layoutParams.rightMargin
-                    } else {
-
-                        0
-                    }
-
-//                    Log.d("Huang", " right " + rightDistance)
-
-                    setMaxPrice(maxPrice - (rightDistance * (maxPrice - minPrice) / rootViewWidth))
-
                 }
             }
 
@@ -152,22 +141,36 @@ class PriceFilterCustomView : LinearLayout {
         }
     }
 
+    private fun getTotalWidth(): Int {
+
+        Log.d(
+            "Huang",
+            " MarginLeft=$leftImageViewMarginLeft, " +
+                    "MarginRight=$rightImageViewMarginRight, " +
+                    "canMoveDistance=$canMoveDistance, " +
+                    "rrrwidth=$rightImageViewWidth, " +
+                    "lllwidth=$leftImageViewWidth"
+        )
+
+        return leftImageViewMarginLeft + leftImageViewWidth + canMoveDistance + rightImageViewWidth + rightImageViewMarginRight
+    }
+
     fun setDefaultPrice(minPrice: Int, maxPrice: Int) {
 
         this.maxPrice = maxPrice
         this.minPrice = minPrice
 
-        setMaxPrice(maxPrice)
-        setMinPrice(minPrice)
+        setMaxPrice(maxPrice.toFloat())
+        setMinPrice(minPrice.toFloat())
     }
 
-    private fun setMaxPrice(maxPrice: Int) {
+    private fun setMaxPrice(maxPrice: Float) {
 
-        highPrice.text = "$$maxPrice"
+        highPrice.text = "$${maxPrice.toInt()}"
     }
 
-    private fun setMinPrice(minPrice: Int) {
+    private fun setMinPrice(minPrice: Float) {
 
-        lowPrice.text = "$$minPrice"
+        lowPrice.text = "$${minPrice.toInt()}"
     }
 }
